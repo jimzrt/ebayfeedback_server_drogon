@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <chrono>
+#include <cmath>
 
 void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback, std::string userName) const
 {
@@ -63,7 +64,7 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
 
     auto client = HttpClient::newHttpClient("https://www.ebay.com");
     auto request2 = HttpRequest::newHttpRequest();
-    //request2->setPath("/usr/" + userName);
+    request2->setPath("/usr/" + userName);
     auto response = client->sendRequest(request2);
     ReqResult r = response.first;
     HttpResponsePtr resp = response.second;
@@ -77,11 +78,11 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
     }
 
     auto html = std::string(resp->getBody());
-    lxb_status_t status;
+    //lxb_status_t status;
     lxb_html_document_t *document;
     lxb_dom_collection_t *collection;
 
-    std::array<float, 4> star_ratings = {};
+    std::array<int, 4> star_ratings = {};
     std::array<int, 4> ratings_count = {};
     std::array<int, 3> sentiments_count = {};
     std::vector<std::string> comments;
@@ -99,13 +100,15 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
     {
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
         element = element->first_child;
-        size_t title_length;
-        const lxb_char_t *title = lxb_dom_element_get_attribute(lxb_dom_interface_element(element), (const lxb_char_t *)"title", 5, NULL);
+        //size_t title_length;
+        const lxb_char_t *title = lxb_dom_element_get_attribute(lxb_dom_interface_element(element), (const lxb_char_t *)"title", 5, nullptr);
         auto title_str = std::string((const char *)title);
-        std::size_t pos = title_str.find("/");
+        std::size_t pos = title_str.find('/');
 
         std::string str3 = title_str.substr(0, pos);
-        star_ratings.at(i / 5) = std::stof(str3);
+        float rating = std::stof(str3);
+        int percent = std::round((rating/5)*100);
+        star_ratings.at(i / 5) = percent;
         std::cout << std::stof(str3) << std::endl;
     }
 
@@ -117,7 +120,7 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
     {
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
 
-        lxb_char_t *text_content = lxb_dom_node_text_content(element, NULL);
+        lxb_char_t *text_content = lxb_dom_node_text_content(element, nullptr);
         auto text_str = std::string((const char *)text_content);
 
         ratings_count.at(i) = std::stoi(text_str);
@@ -132,7 +135,7 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
     {
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
 
-        lxb_char_t *text_content = lxb_dom_node_text_content(element, NULL);
+        lxb_char_t *text_content = lxb_dom_node_text_content(element, nullptr);
         auto text_str = std::string((const char *)text_content);
 
         sentiments_count.at(i) = std::stoi(text_str);
@@ -147,7 +150,7 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
     {
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
 
-        lxb_char_t *text_content = lxb_dom_node_text_content(element, NULL);
+        lxb_char_t *text_content = lxb_dom_node_text_content(element, nullptr);
         auto text_str = std::string((const char *)text_content);
 
         comments.emplace_back(text_str);
@@ -163,7 +166,7 @@ void EbayFeedback::get_user_feedback(const HttpRequestPtr &req, std::function<vo
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
         element = element->first_child;
 
-        lxb_char_t *text_content = lxb_dom_node_text_content(element, NULL);
+        lxb_char_t *text_content = lxb_dom_node_text_content(element, nullptr);
         auto text_str = std::string((const char *)text_content);
 
         comment_times.emplace_back(text_str);
