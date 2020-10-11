@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+  ebayfeedback:
+    #network_mode: "host"
+    build: .
+    ports:
+      - 8081:8081
