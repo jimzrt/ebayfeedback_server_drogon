@@ -22,7 +22,7 @@ add_executable(${PROJECT_NAME} main.cc)
  add_subdirectory(thirdparty/drogon)
  add_subdirectory(thirdparty/lexbor)
  target_link_libraries(${PROJECT_NAME} PRIVATE drogon lexbor)
- target_include_directories(${PROJECT_NAME} PUBLIC ${LEXBOR_DIR_HEADER})
+ target_include_directories(${PROJECT_NAME} PRIVATE ${LEXBOR_INCLUDES})
 ##########
 
 #find_package(Drogon CONFIG REQUIRED)
