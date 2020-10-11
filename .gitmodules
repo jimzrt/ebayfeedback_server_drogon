@@ -1,0 +1,6 @@
+[submodule "thirdparty/drogon"]
+	path = thirdparty/drogon
+	url = https://github.com/an-tao/drogon
+[submodule "thirdparty/lexbor"]
+	path = thirdparty/lexbor
+	url = https://github.com/lexbor/lexbor.git

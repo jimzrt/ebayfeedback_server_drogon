@@ -18,12 +18,14 @@ add_executable(${PROJECT_NAME} main.cc)
 
 ##########
 # If you include the drogon source code locally in your project, use this method to add drogon
-# add_subdirectory(drogon)
-# target_link_libraries(${PROJECT_NAME} PRIVATE drogon)
+ #SET(CMAKE_BUILD_TYPE Release)
+ add_subdirectory(thirdparty/drogon)
+ add_subdirectory(thirdparty/lexbor)
+ target_link_libraries(${PROJECT_NAME} PRIVATE drogon lexbor)
 ##########
 
-find_package(Drogon CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon lexbor)
+#find_package(Drogon CONFIG REQUIRED)
+#target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon lexbor)
 
 if(CMAKE_CXX_STANDARD LESS 17)
 #With C++14, use boost to support any and string_view
