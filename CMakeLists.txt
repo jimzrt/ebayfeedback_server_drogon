@@ -57,4 +57,4 @@ target_sources(${PROJECT_NAME} PRIVATE ${SRC_DIR} ${CTL_SRC} ${FILTER_SRC} ${VIE
 ################################
 # uncomment the following line for dynamically loading views 
 #set_property(TARGET ${PROJECT_NAME} PROPERTY ENABLE_EXPORTS ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
