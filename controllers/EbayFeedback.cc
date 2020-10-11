@@ -14,7 +14,7 @@ EbayFeedback::EbayFeedback() {
 }
 
 void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback, const std::string &userName) {
-    //LOG_INFO << "Fetch " << userName;
+    LOG_INFO << "Fetch " << userName;
 
     if (userName.empty()) {
         fail("Username cannot be empty!", callback);
@@ -28,7 +28,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
 
 
     if (cacheMapPtr->find(userName)) {
-        //LOG_INFO << "User " << userName << " is cached!";
+        LOG_INFO << "User " << userName << " is cached!";
         auto ret = (*(cacheMapPtr))[userName];
         auto resp = HttpResponse::newHttpJsonResponse(ret);
         callback(resp);
