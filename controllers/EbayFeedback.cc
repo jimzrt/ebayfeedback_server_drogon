@@ -3,8 +3,11 @@
 
 #include <cstring>
 #include <cmath>
+#include <chrono>
 
-static constexpr long CACHE_TIME = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::hours(1)).count();
+using namespace std::chrono_literals;
+
+static constexpr auto CACHE_TIME = 60min;
 
 EbayFeedback::EbayFeedback() {
     cacheMapPtr = std::make_unique<CacheMap<std::string, Json::Value>>(drogon::app().getLoop());
@@ -104,7 +107,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
     }
     ret["comments"] = jcomments;
 
-    cacheMapPtr->insert(userName, ret, CACHE_TIME, [userName]() { LOG_INFO << "auto delete cache for " << userName; });
+    cacheMapPtr->insert(userName, ret, std::chrono::duration_cast<std::chrono::seconds>(CACHE_TIME).count(), [userName]() { LOG_INFO << "auto delete cache for " << userName; });
 
     auto jresp = HttpResponse::newHttpJsonResponse(ret);
     callback(jresp);
