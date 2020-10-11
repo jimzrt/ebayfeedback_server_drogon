@@ -8,12 +8,6 @@
   ],
   "app" : {
     "threads_num": 0,
-//    "log": {
-//      "log_path": "./",
-//      "logfile_base_name": "",
-//      "log_size_limit": 100000000,
-//      "log_level": "DEBUG"
-//    },
     "relaunch_on_error": false
   }
 }
