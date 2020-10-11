@@ -28,7 +28,7 @@ public:
     METHOD_LIST_BEGIN
         //use METHOD_ADD to add your custom processing function here;
         //METHOD_ADD(EbayFeedback::get,"/{2}/{1}",Get);//path is /EbayFeedback/{arg2}/{arg1}
-        METHOD_ADD(EbayFeedback::getUserFeedback, "/?userName={1}", Get); //path is /EbayFeedback/{arg1}/{arg2}/list
+        METHOD_ADD(EbayFeedback::getUserFeedback, "/?userName={1}", Get, "HeaderFilter"); //path is /EbayFeedback/{arg1}/{arg2}/list
         //ADD_METHOD_TO(EbayFeedback::your_method_name,"/absolute/path/{1}/{2}/list",Get);//path is /absolute/path/{arg1}/{arg2}/list
     METHOD_LIST_END
 
@@ -36,4 +36,5 @@ public:
     // void get(const HttpRequestPtr& req,std::function<void (const HttpResponsePtr &)> &&callback,int p1,std::string p2);
 
 
+    static std::array<std::string, 4> getRatingDescriptions(const lxb_html_document_t *document, lxb_dom_collection_t *collection);
 };

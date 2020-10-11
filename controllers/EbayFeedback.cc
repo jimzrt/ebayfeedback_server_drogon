@@ -11,7 +11,7 @@ EbayFeedback::EbayFeedback() {
 }
 
 void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback, const std::string &userName) {
-    LOG_DEBUG << "User " << userName << " get his information";
+    LOG_INFO << "Fetch " << userName;
 
     if (userName.empty()) {
         fail("Username cannot be empty!", callback);
@@ -25,7 +25,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
 
 
     if (cacheMapPtr->find(userName)) {
-        LOG_DEBUG << "User " << userName << " is cached!";
+        LOG_INFO << "User " << userName << " is cached!";
         auto ret = (*(cacheMapPtr))[userName];
         auto resp = HttpResponse::newHttpJsonResponse(ret);
         callback(resp);
@@ -39,31 +39,31 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
     ReqResult r = response.first;
     HttpResponsePtr resp = response.second;
     if (r != ReqResult::Ok) {
-        Json::Value ret;
-        ret["result"] = "error";
-        ret["message"] = "Could not connect to ebay!";
-        callback(HttpResponse::newHttpJsonResponse(ret));
+        fail("Could not connect to ebay!", callback);
         return;
     }
 
-    auto html = std::string(resp->getBody());
-    if (html.find("The User ID you entered was not found. Please check the User ID and try again.") != std::string::npos) {
-        fail("User " + userName + " not found!", callback);
-        return;
-    }
+    auto html = resp->getBody();
 
     /* Initialization */
     lxb_html_parser_t *parser = lxb_html_parser_create();
     lxb_html_parser_init(parser);
     /* Parse */
-    lxb_html_document_t *document = lxb_html_parse(parser, reinterpret_cast<const unsigned char *>(html.c_str()), html.length());
+    lxb_html_document_t *document = lxb_html_parse(parser, reinterpret_cast<const lxb_char_t *>(html.data()), html.length());
     /* Destroy parser */
     lxb_html_parser_destroy(parser);
+
+    auto htmlTitle = lxb_html_document_title_raw(document, nullptr);
+    if(std::strstr((char *) htmlTitle, "error")){
+        fail("User " + userName + " not found!", callback);
+        return;
+    }
 
     lxb_dom_collection_t *collection = lxb_dom_collection_make(&document->dom_document, 64);
 
     const std::array<int, 4> &starRatings = getStarRatings(document, collection);
     const std::array<int, 4> &ratingCounts = getRatingCounts(document, collection);
+    const std::array<std::string, 4> &ratingDescriptions = getRatingDescriptions(document, collection);
     const std::array<int, 3> &sentimentCounts = getSentimentCounts(document, collection);
     const std::vector<std::string> &comments = getComments(document, collection);
     const std::vector<std::string> &commentTimes = getCommentTimes(document, collection);
@@ -73,25 +73,23 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
 
     Json::Value ret;
     ret["result"] = "ok";
-    ret["user_name"] = userName;
+    ret["userName"] = userName;
 
     Json::Value jstarRatings;
-    for (auto &rating : starRatings) {
+    for (auto i = 0; i < 4; i++) {
+        Json::Value rating;
+        rating["rating"] = starRatings.at(i);
+        rating["count"] = ratingCounts.at(i);
+        rating["type"] = ratingDescriptions.at(i);
         jstarRatings.append(rating);
     }
-    ret["star_ratings"] = jstarRatings;
-
-    Json::Value jratingsCount;
-    for (auto &ratingCount : ratingCounts) {
-        jratingsCount.append(ratingCount);
-    }
-    ret["ratings_count"] = jratingsCount;
+    ret["ratings"] = jstarRatings;
 
     Json::Value jsentimentsCount;
-    for (auto &sentimentCount : sentimentCounts) {
-        jsentimentsCount.append(sentimentCount);
-    }
-    ret["sentiments_count"] = jsentimentsCount;
+    jsentimentsCount["positive"] = sentimentCounts.at(0);
+    jsentimentsCount["neutral"] = sentimentCounts.at(1);
+    jsentimentsCount["negative"] = sentimentCounts.at(2);
+    ret["sentiments"] = jsentimentsCount;
 
     Json::Value jcomments;
     if (comments.empty()) {
@@ -106,13 +104,14 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
     }
     ret["comments"] = jcomments;
 
-    cacheMapPtr->insert(userName, ret, CACHE_TIME, [userName]() { std::cout << "refresh cache for " << userName << std::endl; });
+    cacheMapPtr->insert(userName, ret, CACHE_TIME, [userName]() { LOG_INFO << "auto delete cache for " << userName; });
 
     auto jresp = HttpResponse::newHttpJsonResponse(ret);
     callback(jresp);
 }
 
 void EbayFeedback::fail(const std::string &errorMessage, std::function<void(const HttpResponsePtr &)> &callback) {
+    LOG_WARN << errorMessage;
     Json::Value ret;
     ret["result"] = "error";
     ret["message"] = errorMessage;
@@ -135,7 +134,6 @@ std::array<int, 4> EbayFeedback::getStarRatings(const lxb_html_document_t *docum
         float rating = std::stof(str3);
         int percent = (int) std::round((rating / 5) * 100);
         starRatings.at(i / 5) = percent;
-        std::cout << std::stof(str3) << std::endl;
     }
     lxb_dom_collection_clean(collection);
     return starRatings;
@@ -152,10 +150,25 @@ std::array<int, 4> EbayFeedback::getRatingCounts(const lxb_html_document_t *docu
         auto textStr = std::string((const char *) textContent);
 
         ratingCounts.at(i) = std::stoi(textStr);
-        std::cout << std::stoi(textStr) << std::endl;
     }
     lxb_dom_collection_clean(collection);
     return ratingCounts;
+}
+
+std::array<std::string, 4> EbayFeedback::getRatingDescriptions(const lxb_html_document_t *document, lxb_dom_collection_t *collection) {
+    std::array<std::string, 4> ratingDescriptions = {};
+    std::string ratingCountClass = "dsr_type";
+    lxb_dom_elements_by_class_name(lxb_dom_interface_element(document->body), collection, (const lxb_char_t *) ratingCountClass.c_str(), ratingCountClass.length());
+    for (size_t i = 0; i < lxb_dom_collection_length(collection); i++) {
+        lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
+
+        lxb_char_t *textContent = lxb_dom_node_text_content(element, nullptr);
+        auto textStr = std::string((const char *) textContent);
+
+        ratingDescriptions.at(i) = textStr;
+    }
+    lxb_dom_collection_clean(collection);
+    return ratingDescriptions;
 }
 
 std::array<int, 3> EbayFeedback::getSentimentCounts(const lxb_html_document *document, lxb_dom_collection_t *collection) {
@@ -169,7 +182,6 @@ std::array<int, 3> EbayFeedback::getSentimentCounts(const lxb_html_document *doc
         auto textStr = std::string((const char *) textContent);
 
         sentimentCounts.at(i) = std::stoi(textStr);
-        std::cout << std::stoi(textStr) << std::endl;
     }
     lxb_dom_collection_clean(collection);
     return sentimentCounts;
@@ -186,7 +198,6 @@ std::vector<std::string> EbayFeedback::getComments(const lxb_html_document *docu
         auto textStr = std::string((const char *) textContent);
 
         comments.emplace_back(textStr);
-        std::cout << textStr << std::endl;
     }
     lxb_dom_collection_clean(collection);
     return comments;
@@ -204,7 +215,6 @@ std::vector<std::string> EbayFeedback::getCommentTimes(const lxb_html_document *
         auto textStr = std::string((const char *) textContent);
 
         commentTimes.emplace_back(textStr);
-        std::cout << textStr << std::endl;
     }
     lxb_dom_collection_clean(collection);
     return commentTimes;
