@@ -1,7 +1,7 @@
 #include "EbayFeedback.h"
 #include <drogon/HttpClient.h>
 
-
+#include <cstring>
 #include <cmath>
 
 static constexpr long CACHE_TIME = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::hours(1)).count();
