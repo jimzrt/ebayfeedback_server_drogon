@@ -37,4 +37,6 @@ public:
 
 
     static std::array<std::string, 4> getRatingDescriptions(const lxb_html_document_t *document, lxb_dom_collection_t *collection);
+
+    static std::vector<std::string> getCommentSentiment(const lxb_html_document *document, lxb_dom_collection_t *collection);
 };

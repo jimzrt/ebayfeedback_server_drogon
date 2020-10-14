@@ -7,7 +7,7 @@
 
 using namespace std::chrono_literals;
 
-static constexpr auto CACHE_TIME = 60min;
+static constexpr auto CACHE_TIME = 5min;
 
 EbayFeedback::EbayFeedback() {
     cacheMapPtr = std::make_unique<CacheMap<std::string, Json::Value>>(drogon::app().getLoop());
@@ -70,6 +70,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
     const std::array<int, 3> &sentimentCounts = getSentimentCounts(document, collection);
     const std::vector<std::string> &comments = getComments(document, collection);
     const std::vector<std::string> &commentTimes = getCommentTimes(document, collection);
+    const std::vector<std::string> &commentSentiments = getCommentSentiment(document, collection);
 
     lxb_dom_collection_destroy(collection, true);
     lxb_html_document_destroy(document);
@@ -102,6 +103,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
             Json::Value comment;
             comment["text"] = comments.at(i);
             comment["date"] = commentTimes.at(i);
+            comment["sentiment"] = commentSentiments.at(i);
             jcomments.append(comment);
         }
     }
@@ -128,11 +130,10 @@ std::array<int, 4> EbayFeedback::getStarRatings(const lxb_html_document_t *docum
     for (size_t i = 0; i < lxb_dom_collection_length(collection); i += 5) {
         lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
         element = element->first_child;
-        //size_t title_length;
+
         const lxb_char_t *title = lxb_dom_element_get_attribute(lxb_dom_interface_element(element), (const lxb_char_t *) "title", 5, nullptr);
         auto titleStr = std::string((const char *) title);
         std::size_t pos = titleStr.find('/');
-
         std::string str3 = titleStr.substr(0, pos);
         float rating = std::stof(str3);
         int percent = (int) std::round((rating / 5) * 100);
@@ -223,6 +224,23 @@ std::vector<std::string> EbayFeedback::getCommentTimes(const lxb_html_document *
     return commentTimes;
 }
 
+std::vector<std::string> EbayFeedback::getCommentSentiment(const lxb_html_document *document, lxb_dom_collection_t *collection) {
+    std::vector<std::string> commentTimes;
+    std::string commentClass = "each_cmmt";
+    lxb_dom_elements_by_class_name(lxb_dom_interface_element(document->body), collection, (const lxb_char_t *) commentClass.c_str(), commentClass.length());
+    for (size_t i = 0; i < lxb_dom_collection_length(collection); i++) {
+        lxb_dom_node_t *element = lxb_dom_collection_node(collection, i);
+        element = element->first_child;
+
+        const lxb_char_t *classNames = lxb_dom_element_get_attribute(lxb_dom_interface_element(element), (const lxb_char_t *) "class", 5, nullptr);
+        auto textStr = std::string((const char *) classNames);
+        std::size_t pos = textStr.find("fb_");
+        std::string str3 = textStr.substr(pos+3);
+        commentTimes.emplace_back(str3);
+    }
+    lxb_dom_collection_clean(collection);
+    return commentTimes;
+}
 
 
 
