@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cmath>
 #include <chrono>
+#include <algorithm>
 
 using namespace std::chrono_literals;
 
@@ -152,7 +153,7 @@ std::array<int, 4> EbayFeedback::getRatingCounts(const lxb_html_document_t *docu
 
         lxb_char_t *textContent = lxb_dom_node_text_content(element, nullptr);
         auto textStr = std::string((const char *) textContent);
-
+        textStr.erase(std::remove(textStr.begin(), textStr.end(), ','), textStr.end());
         ratingCounts.at(i) = std::stoi(textStr);
     }
     lxb_dom_collection_clean(collection);
@@ -184,7 +185,7 @@ std::array<int, 3> EbayFeedback::getSentimentCounts(const lxb_html_document *doc
 
         lxb_char_t *textContent = lxb_dom_node_text_content(element, nullptr);
         auto textStr = std::string((const char *) textContent);
-
+        textStr.erase(std::remove(textStr.begin(), textStr.end(), ','), textStr.end());
         sentimentCounts.at(i) = std::stoi(textStr);
     }
     lxb_dom_collection_clean(collection);
