@@ -23,7 +23,7 @@ void EbayFeedback::getUserFeedback(const HttpRequestPtr &req, std::function<void
     }
 
     if (req->getParameter("refreshCache") == "1") {
-        LOG_DEBUG << "Force refresh cache for " << userName;
+        LOG_INFO << "Force refresh cache for " << userName;
         cacheMapPtr->erase(userName);
     }
 
